@@ -23,7 +23,7 @@ install_dependencies()
 engine = pyttsx3.init()
 voices = engine.getProperty('voices')
 
-# Try to set a pleasant voice (different indices for different systems)
+# Try to set a pleasant voice
 try:
     engine.setProperty('voice', voices[0].id)  # Usually [0] = male, [1] = female
 except:
@@ -96,7 +96,7 @@ def open_app(app_name):
         speak("That application isn't configured yet.")
 
 # ===== MAIN LOOP =====
-if __name__ == "__main__":
+if _name_ == "_main_":
     greet()
     
     while True:
@@ -136,4 +136,4 @@ if __name__ == "__main__":
             speak("Yes ma'am?")
             
         else:
-            speak("I didn't understand that command. Try something like 'open YouTube' or 'what time is it?'")
+            speak("I didn't understand that command. Try something like 'open YouTube' or 'what time is it?'")
