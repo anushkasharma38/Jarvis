@@ -1,175 +1,259 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JARVIS Control Panel</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #0a0a0a;
-            color: white;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
-            background-size: cover;
-            background-position: center;
-        }
-        
-        .container {
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-        }
-        
-        h1 {
-            color: #ff0000;
-            font-size: 3rem;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
-        }
-        
-        .button-container {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .control-button {
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-        
-        #startBtn {
-            background-color: #ff0000;
-            color: white;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
-        }
-        
-        #stopBtn {
-            background-color: #333;
-            color: white;
-        }
-        
-        .control-button:hover {
-            transform: scale(1.05);
-        }
-        
-        .status {
-            margin-top: 20px;
-            font-size: 1.2rem;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
-        .active {
-            background-color: rgba(0, 255, 0, 0.2);
-            color: #00ff00;
-        }
-        
-        .inactive {
-            background-color: rgba(255, 0, 0, 0.2);
-            color: #ff0000;
-        }
-        
-        .log {
-            margin-top: 20px;
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 10px;
-            background-color: rgba(0, 0, 0, 0.5);
-            border-radius: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>JARVIS</h1>
-        <div class="button-container">
-            <button class="control-button" id="startBtn">START</button>
-            <button class="control-button" id="stopBtn">STOP</button>
-        </div>
-        <div class="status inactive" id="status">Status: OFFLINE</div>
-        <div class="log" id="log">
-            <div>System ready. Click START to activate JARVIS.</div>
-        </div>
-    </div>
+import speech_recognition as sr
+import pyttsx3
+import datetime
+import webbrowser
+import os
+import time
+import random
+import requests
+import json
+import threading
+import tkinter as tk
+from PIL import Image, ImageTk
+from tkinter import scrolledtext, ttk
 
-    <script>
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const statusDiv = document.getElementById('status');
-        const logDiv = document.getElementById('log');
+class Jarvis:
+    def _init_(self, root):
+        self.root = root
+        self.root.title("J.A.R.V.I.S")
+        self.root.geometry("800x600")
+        self.root.configure(bg="#0c0c1e")
+        self.root.resizable(False, False)
         
-        // WebSocket connection to Python backend
-        let socket = null;
+        self.recognizer = sr.Recognizer()
+        self.engine = pyttsx3.init()
+        self.engine.setProperty('rate', 180)
+        self.engine.setProperty('volume', 0.9)
         
-        function addLog(message) {
-            const logEntry = document.createElement('div');
-            logEntry.textContent = message;
-            logDiv.appendChild(logEntry);
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
+        self.active = False
+        self.create_widgets()
+        self.setup_ui()
         
-        function connectToJARVIS() {
-            // In a real implementation, this would connect to your Python backend
-            // For demo purposes, we'll simulate the connection
-            addLog("Connecting to JARVIS...");
+    def create_widgets(self):
+        # Header
+        self.header = tk.Frame(self.root, bg="#1a1a2e")
+        self.header.pack(fill="x", padx=20, pady=10)
+        
+        self.title_label = tk.Label(
+            self.header, 
+            text="J.A.R.V.I.S", 
+            font=("Helvetica", 24, "bold"),
+            fg="#00ffff",
+            bg="#1a1a2e"
+        )
+        self.title_label.pack(pady=10)
+        
+        self.status_label = tk.Label(
+            self.header, 
+            text="Status: Inactive",
+            font=("Helvetica", 12),
+            fg="#ff5555",
+            bg="#1a1a2e"
+        )
+        self.status_label.pack(pady=5)
+        
+        # Main content
+        self.main_frame = tk.Frame(self.root, bg="#0c0c1e")
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Left panel - Jarvis image
+        self.image_frame = tk.Frame(self.main_frame, bg="#0c0c1e")
+        self.image_frame.pack(side="left", fill="y", padx=(0, 20))
+        
+        img = Image.open("jarvis_icon.png")  # Create a blank 200x200 blue image if file not found
+        img = img.resize((200, 200), Image.LANCZOS)
+        self.jarvis_img = ImageTk.PhotoImage(img)
+        
+        self.image_label = tk.Label(
+            self.image_frame, 
+            image=self.jarvis_img,
+            bg="#0c0c1e"
+        )
+        self.image_label.pack(pady=10)
+        
+        # Right panel - Console
+        self.console_frame = tk.Frame(self.main_frame, bg="#0c0c1e")
+        self.console_frame.pack(side="right", fill="both", expand=True)
+        
+        self.console = scrolledtext.ScrolledText(
+            self.console_frame,
+            bg="#1e1e2e",
+            fg="#ffffff",
+            font=("Consolas", 12),
+            insertbackground="white",
+            wrap="word",
+            padx=10,
+            pady=10
+        )
+        self.console.pack(fill="both", expand=True)
+        self.console.insert("end", "System initialized...\nType 'help' for commands\n")
+        self.console.configure(state="disabled")
+        
+        # Controls
+        self.controls_frame = tk.Frame(self.root, bg="#0c0c1e")
+        self.controls_frame.pack(fill="x", padx=20, pady=10)
+        
+        style = ttk.Style()
+        style.configure("TButton", font=("Helvetica", 12), padding=10)
+        style.map("TButton", 
+                  foreground=[('active', '#00ffff')],
+                  background=[('active', '#1a1a2e')])
+        
+        self.listen_btn = ttk.Button(
+            self.controls_frame,
+            text="🎤 Activate Voice",
+            command=self.toggle_listening,
+            style="TButton"
+        )
+        self.listen_btn.pack(side="left", padx=10)
+        
+        self.exit_btn = ttk.Button(
+            self.controls_frame,
+            text="Exit",
+            command=self.root.destroy,
+            style="TButton"
+        )
+        self.exit_btn.pack(side="right", padx=10)
+        
+    def setup_ui(self):
+        # Configure colors
+        self.root.option_add("*TButton*background", "#1a1a2e")
+        self.root.option_add("*TButton*foreground", "#ffffff")
+        self.root.option_add("*TButton*highlightBackground", "#1a1a2e")
+        
+    def toggle_listening(self):
+        self.active = not self.active
+        if self.active:
+            self.status_label.config(text="Status: Listening...", fg="#55ff55")
+            self.listen_btn.config(text="🔴 Stop Listening")
+            self.speak("Online and ready")
+            self.console_log("Listening activated...")
+            threading.Thread(target=self.listen).start()
+        else:
+            self.status_label.config(text="Status: Inactive", fg="#ff5555")
+            self.listen_btn.config(text="🎤 Activate Voice")
+            self.console_log("Listening deactivated")
+    
+    def console_log(self, message):
+        self.console.configure(state="normal")
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        self.console.insert("end", f"[{timestamp}] {message}\n")
+        self.console.see("end")
+        self.console.configure(state="disabled")
+    
+    def speak(self, text):
+        self.console_log(f"JARVIS: {text}")
+        threading.Thread(target=self._speak_thread, args=(text,)).start()
+    
+    def _speak_thread(self, text):
+        self.engine.say(text)
+        self.engine.runAndWait()
+    
+    def listen(self):
+        with sr.Microphone() as source:
+            self.recognizer.adjust_for_ambient_noise(source)
+            while self.active:
+                try:
+                    self.console_log("Listening...")
+                    audio = self.recognizer.listen(source, timeout=5)
+                    command = self.recognizer.recognize_google(audio).lower()
+                    self.console_log(f"USER: {command}")
+                    self.process_command(command)
+                except sr.WaitTimeoutError:
+                    if self.active:
+                        self.console_log("Listening timed out. Trying again...")
+                    continue
+                except sr.UnknownValueError:
+                    self.console_log("Could not understand audio")
+                except Exception as e:
+                    self.console_log(f"Error: {str(e)}")
+    
+    def process_command(self, command):
+        if "hello" in command:
+            self.speak(f"Hello! How can I help you?")
+        elif "time" in command:
+            current_time = datetime.datetime.now().strftime("%I:%M %p")
+            self.speak(f"The current time is {current_time}")
+        elif "date" in command:
+            current_date = datetime.datetime.now().strftime("%B %d, %Y")
+            self.speak(f"Today's date is {current_date}")
+        elif "search" in command:
+            query = command.replace("search", "").strip()
+            if query:
+                self.speak(f"Searching for {query}")
+                webbrowser.open(f"https://www.google.com/search?q={query}")
+            else:
+                self.speak("What would you like me to search for?")
+        elif "open youtube" in command:
+            self.speak("Opening YouTube")
+            webbrowser.open("https://www.youtube.com")
+        elif "open gmail" in command:
+            self.speak("Opening Gmail")
+            webbrowser.open("https://mail.google.com")
+        elif "weather" in command:
+            self.get_weather()
+        elif "joke" in command:
+            self.tell_joke()
+        elif "thank you" in command:
+            responses = ["You're welcome!", "Anytime!", "Glad I could help!"]
+            self.speak(random.choice(responses))
+        elif "exit" in command or "quit" in command:
+            self.speak("Shutting down system. Goodbye!")
+            self.active = False
+            self.status_label.config(text="Status: Inactive", fg="#ff5555")
+            self.listen_btn.config(text="🎤 Activate Voice")
+        else:
+            self.speak("I'm sorry, I didn't understand that command. Can you please repeat?")
+    
+    def get_weather(self):
+        try:
+            # Get location from IP
+            location_res = requests.get('https://ipinfo.io')
+            location_data = location_res.json()
+            city = location_data.get('city', 'New York')
             
-            setTimeout(() => {
-                statusDiv.textContent = "Status: ONLINE";
-                statusDiv.className = "status active";
-                addLog("JARVIS activated. Ready for commands.");
-                addLog("Voice recognition system initialized.");
-            }, 1000);
-        }
-        
-        function disconnectFromJARVIS() {
-            addLog("Shutting down JARVIS...");
+            # Get weather data
+            api_key = "YOUR_OPENWEATHER_API_KEY"  # Replace with your API key
+            weather_res = requests.get(
+                f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+            )
+            weather_data = weather_res.json()
             
-            setTimeout(() => {
-                statusDiv.textContent = "Status: OFFLINE";
-                statusDiv.className = "status inactive";
-                addLog("JARVIS deactivated.");
-            }, 800);
-        }
-        
-        startBtn.addEventListener('click', () => {
-            connectToJARVIS();
-        });
-        
-        stopBtn.addEventListener('click', () => {
-            disconnectFromJARVIS();
-        });
-        
-        // For demo purposes - simulate receiving commands
-        setInterval(() => {
-            if (statusDiv.className.includes('active')) {
-                const commands = [
-                    "Listening for voice commands...",
-                    "Waiting for activation phrase...",
-                    "System check: All functions normal"
-                ];
-                if (Math.random() > 0.8) {
-                    addLog(commands[Math.floor(Math.random() * commands.length)]);
-                }
-            }
-        }, 3000);
-    </script>
-</body>
-</html>
+            if weather_res.status_code == 200:
+                temp = weather_data['main']['temp']
+                desc = weather_data['weather'][0]['description']
+                self.speak(f"Current weather in {city} is {desc} with a temperature of {temp} degrees Celsius")
+            else:
+                self.speak("Sorry, I couldn't retrieve the weather information")
+        except Exception as e:
+            self.speak("Weather service is currently unavailable")
+            self.console_log(f"Weather error: {str(e)}")
+    
+    def tell_joke(self):
+        jokes = [
+            "Why don't scientists trust atoms? Because they make up everything!",
+            "What did one ocean say to the other ocean? Nothing, they just waved!",
+            "Why did the scarecrow win an award? Because he was outstanding in his field!",
+            "I'm reading a book about anti-gravity. It's impossible to put down!",
+            "Did you hear about the mathematician who's afraid of negative numbers? He'll stop at nothing to avoid them!"
+        ]
+        self.speak(random.choice(jokes))
+
+if _name_ == "_main_":
+    # Create jarvis_icon.png if it doesn't exist
+    if not os.path.exists("jarvis_icon.png"):
+        from tkinter import messagebox
+        try:
+            from io import BytesIO
+            import requests
+            response = requests.get("https://i.imgur.com/7Qb7j0Q.png")
+            img = Image.open(BytesIO(response.content))
+            img.save("jarvis_icon.png")
+        except:
+            # Create a blank blue image if download fails
+            img = Image.new('RGB', (200, 200), color='#1a1a2e')
+            img.save("jarvis_icon.png")
+    
+    root = tk.Tk()
+    app = Jarvis(root)
+    root.mainloop()
