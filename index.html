@@ -3,93 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JARVIS Voice Assistant</title>
+    <title>JARVIS Control Panel</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #fff;
+            font-family: 'Arial', sans-serif;
+            background-color: #0a0a0a;
+            color: white;
             text-align: center;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1352&q=80');
+            justify-content: center;
+            background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
             background-size: cover;
             background-position: center;
         }
         
-        .overlay {
+        .container {
             background-color: rgba(0, 0, 0, 0.7);
-            padding: 40px;
-            border-radius: 20px;
-            width: 80%;
-            max-width: 600px;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
         }
         
         h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
             color: #ff0000;
-            text-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
-            font-family: 'Agency FB', sans-serif;
-            letter-spacing: 3px;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
         }
         
-        .status-container {
-            margin: 20px 0;
-            padding: 15px;
-            background-color: rgba(30, 30, 30, 0.7);
-            border-radius: 10px;
-        }
-        
-        .status-indicator {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 10px;
-            background-color: #555;
-        }
-        
-        .status-active {
-            background-color: #00ff00;
-            box-shadow: 0 0 10px #00ff00;
-        }
-        
-        .status-text {
-            font-size: 1.2rem;
-            vertical-align: middle;
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
         }
         
         .control-button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        #startBtn {
             background-color: #ff0000;
             color: white;
-            border: none;
-            border-radius: 50%;
-            width: 150px;
-            height: 150px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
-            transition: all 0.3s;
-            margin: 20px 0;
-            outline: none;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        }
+        
+        #stopBtn {
+            background-color: #333;
+            color: white;
         }
         
         .control-button:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.9);
         }
         
-        .control-button:active {
-            transform: scale(0.95);
+        .status {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            padding: 10px;
+            border-radius: 5px;
         }
         
-        .command-log {
-            background-color: rgba(30, 30, 30, 0.7);
-            border-radius
+        .active {
+            background-color: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+        }
+        
+        .inactive {
+            background-color: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+        }
+        
+        .log {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JARVIS</h1>
+        <div class="button-container">
+            <button class="control-button" id="startBtn">START</button>
+            <button class="control-button" id="stopBtn">STOP</button>
+        </div>
+        <div class="status inactive" id="status">Status: OFFLINE</div>
+        <div class="log" id="log">
+            <div>System ready. Click START to activate JARVIS.</div>
+        </div>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        
+        // WebSocket connection to Python backend
+        let socket = null;
+        
+        function addLog(message) {
+            const logEntry = document.createElement('div');
+            logEntry.textContent = message;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function connectToJARVIS() {
+            // In a real implementation, this would connect to your Python backend
+            // For demo purposes, we'll simulate the connection
+            addLog("Connecting to JARVIS...");
+            
+            setTimeout(() => {
+                statusDiv.textContent = "Status: ONLINE";
+                statusDiv.className = "status active";
+                addLog("JARVIS activated. Ready for commands.");
+                addLog("Voice recognition system initialized.");
+            }, 1000);
+        }
+        
+        function disconnectFromJARVIS() {
+            addLog("Shutting down JARVIS...");
+            
+            setTimeout(() => {
+                statusDiv.textContent = "Status: OFFLINE";
+                statusDiv.className = "status inactive";
+                addLog("JARVIS deactivated.");
+            }, 800);
+        }
+        
+        startBtn.addEventListener('click', () => {
+            connectToJARVIS();
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            disconnectFromJARVIS();
+        });
+        
+        // For demo purposes - simulate receiving commands
+        setInterval(() => {
+            if (statusDiv.className.includes('active')) {
+                const commands = [
+                    "Listening for voice commands...",
+                    "Waiting for activation phrase...",
+                    "System check: All functions normal"
+                ];
+                if (Math.random() > 0.8) {
+                    addLog(commands[Math.floor(Math.random() * commands.length)]);
+                }
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
